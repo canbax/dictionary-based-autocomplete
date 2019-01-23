@@ -36,7 +36,7 @@ def parse_source(get_word_from_line_fn, file_name):
     for line in lines:
       word = get_word_from_line_fn(line)
       if word != None and not word.isnumeric():
-        # word = word.lower()
+        word = word.lower()
         all_words.add(word)
   print('found ', len(all_words), ' unique words')
   
