@@ -13,21 +13,22 @@ class Node:
   def __getitem__(self, key):
     return self.children[key]
 
-class TurkishTrie:
+class Trie:
   """ letter alternatives should be generated from statistics of typos 
   things to concern: 
   1. ünlü düşmesi like (oğul-u > oğlu)
   2. ünlü daralması  “a” veya “e” sesi daralarak “ı, i, u, ü” seslerinden birine dönüşür: başla-yor > başlıyor
   3. Ünsüz Yumuşaması “p, ç, t, k” sert ünsüzleri ile biten sözcükler, ünlü ile başlayan bir ek aldığında yumuşayarak “b, c, d, g, ğ” ye dönüşür:
+  4. şapkalı harfler: "î, â, û" 
   """
 
   def __init__(self, letter_alternatives=None):
     self.head = Node()
     if letter_alternatives == None:
-      self.letter_alternatives = { 'a':set({}), 'b':set({'p'}), 'c':set({'ç'}), 'ç':set({'c'}), 'd':set({'t'}), 'e':set({}),
-      'f':set({}), 'g':set({'ğ', 'k'}), 'ğ':set({'g', 'k'}), 'h':set({}), 'ı':set({'i','a','e'}), 'i':set({'ı','a','e'}), 'j':set({'c'}), 'k':set({'c'}), 
+      self.letter_alternatives = { 'a':set({'â'}), 'b':set({'p'}), 'c':set({'ç'}), 'ç':set({'c'}), 'd':set({'t'}), 'e':set({}),
+      'f':set({}), 'g':set({'ğ', 'k'}), 'ğ':set({'g', 'k'}), 'h':set({}), 'ı':set({'i','a','e','î'}), 'i':set({'ı','a','e','î'}), 'j':set({'c'}), 'k':set({'c'}), 
       'l':set({}), 'm':set({}), 'n':set({}), 'o':set({'ö'}), 'ö':set({'o'}), 'p':set({}), 'r':set({}), 's':set({'ş'}), 'ş':set({'s'}), 't':set({}), 
-      'u':set({'ü','a','e'}), 'ü':set({'u','a','e'}), 'v':set({}), 'y':set({}), 'z':set({}), 'x':set({'ks'}), 'q':set({'ku', 'k'}) }
+      'u':set({'ü','a','e','û'}), 'ü':set({'u','a','e','û'}), 'v':set({}), 'y':set({}), 'z':set({}), 'x':set({'ks'}), 'q':set({'ku', 'k'}) }
     else:
       self.letter_alternatives = letter_alternatives
   
@@ -37,7 +38,7 @@ class TurkishTrie:
   def __getitem__(self, key):
     return self.head.children[key]
 
-  def add(self, word):
+  def add(self, word, word_idx):
     curr_node = self.head
 
     i = 0
@@ -55,14 +56,14 @@ class TurkishTrie:
     
     # Let's store the full word at the end node so we don't need to
     # travel back up the tree to reconstruct the word
-    curr_node.data = word
+    curr_node.data = word_idx
   
   def has_word(self, word):
     if word == None:
       raise ValueError('word should not be None')
     if word == '':
       return False
-    
+    word = word.lower()
     curr_node = self.head
 
     for letter in word:
@@ -87,27 +88,6 @@ class TurkishTrie:
       else:
         curr_node = curr_node
   
-  # standard bfs goes through alternatives of letter
-  def bfs(self, word, word_idx, curr_node, results, path):
-    
-    if curr_node == None or word_idx == len(word):
-      results.add(path)
-      return
-
-    curr_char = word[word_idx]
-    alternatives = (self.letter_alternatives[curr_char]).union(set({curr_char}))
-    
-    has_alternative = False
-    for alternative in alternatives:
-      if alternative in curr_node.children:
-        has_alternative = True
-        idx2 = word_idx + 1
-        path += alternative
-        self.bfs(word, idx2, curr_node[alternative], results, path)
-    
-    if not has_alternative:
-      results.add(path)
-
   def get_data(self, word):
     """ This returns the 'data' of the node identified by the given word """
     if not self.has_word(word):
@@ -120,15 +100,67 @@ class TurkishTrie:
     
     return curr_node.data
 
-trie = TurkishTrie()
-trie.add('kitap')
-trie.add('kitaplık')
-trie.add('sakız')
-trie.add('gel')
-result_set = set({})
-trie.bfs('sakiz', 0, trie.head, result_set, '')
-print (result_set)
+  # standard bfs goes through alternatives of letter
+  # word must be lower case
+  def bfs(self, word, char_idx, curr_node, results, path):
+    if curr_node == None or char_idx == len(word):
+      results.add(path)
+      return
 
-print (trie.has_word('gelmek'))
-print (trie.has_word('gel'))
+    curr_char = word[char_idx]
+    alternatives = (self.letter_alternatives[curr_char]).union(set({curr_char}))
+    
+    has_alternative = False
+    for alternative in alternatives:
+      curr_path = path
+      if alternative in curr_node.children:
+        has_alternative = True
+        idx2 = char_idx + 1
+        curr_path += alternative
+        self.bfs(word, idx2, curr_node[alternative], results, curr_path)
+    
+    if not has_alternative:
+      results.add(path)
+  
+  def edit_dist(self, s1, s2):
+    l1 = len(s1) + 1
+    l2 = len(s2) + 1
+    table = [[i if j==0 else j if i==0 else 0 for i in range(l1)] for j in range(l2)]
+    for i in range(1, l1):
+      for j in range(1, l2):
+        if s1[i - 1] == s2[j - 1]:
+          table[j][i] = table[j - 1][i - 1]
+        else:
+          table[j][i] = 1 + min(table[j][i - 1], table[j - 1][i], table[j - 1][i - 1])
+    print(table)
+    return table[l2 - 1][l1 - 1]
+
+def build_dictionary_from_file(file_name):
+  d = dict()
+  cnt = 0
+  with open(file_name, 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+    for line in lines:
+      d[cnt] = line.strip()
+      cnt = cnt + 1
+  return d
+
+def build_trie_from_dictionary(dic):
+  trie = Trie()
+  for word_idx in dic:
+    trie.add(dic[word_idx], word_idx)
+  return trie
+
+d = build_dictionary_from_file('tr_words.txt')
+trie = build_trie_from_dictionary(d)
+
+result_set = set({})
+trie.bfs('mesaj', 0, trie.head, result_set, '')
+
+
+print(trie.edit_dist('mesaj', 'meşa'))
+
+print (result_set)
+# print (trie.has_word('gelmek'))
+# print (trie.has_word('gel'))
 

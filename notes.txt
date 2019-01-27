@@ -1,0 +1,2 @@
+1. negative forms of words in turkish is important for example "gelmek" means a positive word "gelmemek" means a negative word
+having both negative and positive words in the dictionary might make lemmatization more meaningful
