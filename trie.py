@@ -22,7 +22,7 @@ class Trie:
   4. şapkalı harfler: "î, â, û" 
   """
 
-  def __init__(self, letter_alternatives=None):
+  def __init__(self, letter_alternatives=None, alphabet=None):
     self.head = Node()
     if letter_alternatives == None:
       self.letter_alternatives = { 'a':set({'â'}), 'b':set({'p'}), 'c':set({'ç'}), 'ç':set({'c'}), 'd':set({'t'}), 'e':set({}),
@@ -31,7 +31,11 @@ class Trie:
       'u':set({'ü','a','e','û'}), 'ü':set({'u','a','e','û'}), 'v':set({}), 'y':set({}), 'z':set({}), 'x':set({'ks'}), 'q':set({'ku', 'k'}) }
     else:
       self.letter_alternatives = letter_alternatives
-  
+    if alphabet:
+      self.alphabet = alphabet
+    else:
+      self.alphabet = 'abcçdefgğhıijklmnoöprsştuüvyz'
+      
   def is_vowel(self, letter):
     return letter in 'aeıiuüoö'
   
@@ -119,6 +123,18 @@ class Trie:
         curr_path += alternative
         self.bfs(word, idx2, curr_node[alternative], results, curr_path)
     
+    # assume there is an extra letter in the word
+    self.bfs(word, char_idx + 1, curr_node, results, path)
+    
+    # what happens if there is a missing letter in the word ? 
+    # has_missing_letter = False
+    # for letter in self.alphabet:
+    #   curr_path = path
+    #   if letter in curr_node.children:
+    #     has_missing_letter = True
+    #     curr_path += letter
+    #     self.bfs(word, char_idx, curr_node[letter], results, curr_path)
+
     if not has_alternative:
       results.add(path)
   
@@ -155,8 +171,7 @@ d = build_dictionary_from_file('tr_words.txt')
 trie = build_trie_from_dictionary(d)
 
 result_set = set({})
-trie.bfs('mesaj', 0, trie.head, result_set, '')
-
+trie.bfs('mesaaj', 0, trie.head, result_set, '')
 
 print(trie.edit_dist('mesaj', 'meşa'))
 
