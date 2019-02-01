@@ -13,6 +13,7 @@ class Node:
   def __getitem__(self, key):
     return self.children[key]
 
+# constructing Trie by reading words from right to left might be useful to find some words
 class Trie:
   """ letter alternatives should be generated from statistics of typos 
   things to concern: 
@@ -22,7 +23,7 @@ class Trie:
   4. şapkalı harfler: "î, â, û" 
   """
 
-  def __init__(self, letter_alternatives=None, alphabet=None):
+  def __init__(self, letter_alternatives=None, alphabet=None, dict_file_name=None):
     self.head = Node()
     if letter_alternatives == None:
       self.letter_alternatives = { 'a':set({'â'}), 'b':set({'p'}), 'c':set({'ç'}), 'ç':set({'c'}), 'd':set({'t'}), 'e':set({}),
@@ -35,6 +36,9 @@ class Trie:
       self.alphabet = alphabet
     else:
       self.alphabet = 'abcçdefgğhıijklmnoöprsştuüvyz'
+
+    if dict_file_name != None:
+      self.build_trie(dict_file_name)
       
   def is_vowel(self, letter):
     return letter in 'aeıiuüoö'
@@ -148,34 +152,41 @@ class Trie:
           table[j][i] = table[j - 1][i - 1]
         else:
           table[j][i] = 1 + min(table[j][i - 1], table[j - 1][i], table[j - 1][i - 1])
-    print(table)
     return table[l2 - 1][l1 - 1]
 
-def build_dictionary_from_file(file_name):
-  d = dict()
-  cnt = 0
-  with open(file_name, 'r', encoding='utf-8') as f:
-    lines = f.readlines()
-    for line in lines:
-      d[cnt] = line.strip()
-      cnt = cnt + 1
-  return d
+  def lemmatize(self, pattern, dist_func=None):
+    result_set = set({})
+    self.bfs(pattern, 0, self.head, result_set, '')
+    if dist_func == None:
+      dist_func = self.edit_dist
+    
+    min_dist = 2147000000
+    min_dist_elem = ''
+    for result in result_set:
+      dist = dist_func(pattern, result)
+      if dist < min_dist:
+        min_dist = dist
+        min_dist_elem = result
+    return min_dist_elem
 
-def build_trie_from_dictionary(dic):
-  trie = Trie()
-  for word_idx in dic:
-    trie.add(dic[word_idx], word_idx)
-  return trie
+  def build_dictionary_from_file(self, file_name):
+    d = dict()
+    cnt = 0
+    with open(file_name, 'r', encoding='utf-8') as f:
+      lines = f.readlines()
+      for line in lines:
+        d[cnt] = line.strip()
+        cnt = cnt + 1
+    return d
 
-d = build_dictionary_from_file('tr_words.txt')
-trie = build_trie_from_dictionary(d)
+  def build_trie_from_dictionary(self, dic):
+    for word_idx in dic:
+      self.add(dic[word_idx], word_idx)
 
-result_set = set({})
-trie.bfs('mesaaj', 0, trie.head, result_set, '')
+  def build_trie(self, dict_file_name):
+    d = self.build_dictionary_from_file(dict_file_name)
+    self.build_trie_from_dictionary(d)
 
-print(trie.edit_dist('mesaj', 'meşa'))
-
-print (result_set)
-# print (trie.has_word('gelmek'))
-# print (trie.has_word('gel'))
+trie = Trie(None, None, 'tr_words.txt')
+print (trie.lemmatize("mesaaj"))
 
