@@ -29,13 +29,13 @@ class Trie:
       self.letter_alternatives = { 'a':set({'â'}), 'b':set({'p'}), 'c':set({'ç'}), 'ç':set({'c'}), 'd':set({'t'}), 'e':set({}),
       'f':set({}), 'g':set({'ğ', 'k'}), 'ğ':set({'g', 'k'}), 'h':set({}), 'ı':set({'i','a','e','î'}), 'i':set({'ı','a','e','î'}), 'j':set({'c'}), 'k':set({'c'}), 
       'l':set({}), 'm':set({}), 'n':set({}), 'o':set({'ö'}), 'ö':set({'o'}), 'p':set({}), 'r':set({}), 's':set({'ş'}), 'ş':set({'s'}), 't':set({}), 
-      'u':set({'ü','a','e','û'}), 'ü':set({'u','a','e','û'}), 'v':set({}), 'y':set({}), 'z':set({}), 'x':set({'ks'}), 'q':set({'ku', 'k'}) }
+      'u':set({'ü','a','e','û'}), 'ü':set({'u','a','e','û'}), 'v':set({}), 'y':set({}), 'z':set({}), 'x':set({'ks'}), 'q':set({'ku', 'k'}), 'w':set({''}) }
     else:
       self.letter_alternatives = letter_alternatives
     if alphabet:
       self.alphabet = alphabet
     else:
-      self.alphabet = 'abcçdefgğhıijklmnoöprsştuüvyz'
+      self.alphabet = 'abcçdefgğhıijklmnoöprsştuüvyzqwx'
 
     if dict_file_name != None:
       self.build_trie(dict_file_name)
@@ -112,7 +112,8 @@ class Trie:
   # word must be lower case
   def bfs(self, word, char_idx, curr_node, results, path):
     if curr_node == None or char_idx == len(word):
-      results.add(path)
+      if curr_node != None and curr_node.data != None:
+        results.add(path)
       return
 
     curr_char = word[char_idx]
@@ -120,13 +121,14 @@ class Trie:
     
     has_alternative = False
     for alternative in alternatives:
-      curr_path = path
-      if alternative in curr_node.children:
-        has_alternative = True
-        idx2 = char_idx + 1
-        curr_path += alternative
-        self.bfs(word, idx2, curr_node[alternative], results, curr_path)
-    
+      for letter in alternative:
+        curr_path = path
+        if letter in curr_node.children:
+          has_alternative = True
+          idx2 = char_idx + 1
+          curr_path += letter
+          self.bfs(word, idx2, curr_node[letter], results, curr_path)
+      
     # assume there is an extra letter in the word
     self.bfs(word, char_idx + 1, curr_node, results, path)
     
@@ -139,8 +141,8 @@ class Trie:
     #     curr_path += letter
     #     self.bfs(word, char_idx, curr_node[letter], results, curr_path)
 
-    if not has_alternative:
-      results.add(path)
+    # if not has_alternative:
+    #   results.add(path)
   
   def edit_dist(self, s1, s2):
     l1 = len(s1) + 1
@@ -188,5 +190,13 @@ class Trie:
     self.build_trie_from_dictionary(d)
 
 trie = Trie(None, None, 'tr_words.txt')
-print (trie.lemmatize("mesaaj"))
+
+str1 = "Turkcell'e kızgınım. Ve bu kızgınlık sanırım ayrılıkla sonlanıcak gibi geliyor bana.Farklı bir operatörün %30'u fazla fiyat teklif ediyorlar"
+str1 = str1.lower().replace("'", '').replace('.', '').replace('%', '').replace('30', '')
+
+for word in str1.split():
+  result_set = set({})
+  print ("word: ", word)
+  trie.bfs(word, 0, trie.head, result_set, '')
+  print ("result_set: ", result_set)
 
