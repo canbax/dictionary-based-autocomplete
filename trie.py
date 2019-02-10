@@ -118,13 +118,17 @@ class Trie:
 
     curr_char = word[char_idx]
     alternatives = (self.letter_alternatives[curr_char]).union(set({curr_char}))
-    
-    has_alternative = False
+
+    # in turkish -mek, -mak is always an alternative for verbs
+    alternatives.add('mak')
+    alternatives.add('mek')
+
+    # has_alternative = False
     for alternative in alternatives:
       for letter in alternative:
         curr_path = path
         if letter in curr_node.children:
-          has_alternative = True
+          # has_alternative = True
           idx2 = char_idx + 1
           curr_path += letter
           self.bfs(word, idx2, curr_node[letter], results, curr_path)
@@ -155,21 +159,41 @@ class Trie:
         else:
           table[j][i] = 1 + min(table[j][i - 1], table[j - 1][i], table[j - 1][i - 1])
     return table[l2 - 1][l1 - 1]
+  
+  def edit_dist2(self, s1, s2):
+    l1 = len(s1) + 1
+    l2 = len(s2) + 1
+    table = [[0 for i in range(l1)] for j in range(l2)]
+    curr_sum = 0
+    for i in range(l1):
+      table[0][i] = curr_sum
+      curr_sum += i
 
-  def lemmatize(self, pattern, dist_func=None):
+    curr_sum = 0
+    for j in range(l2):
+      table[j][0] = curr_sum
+      curr_sum += j
+      
+    for i in range(1, l1):
+      for j in range(1, l2):
+        if s1[i - 1] == s2[j - 1]:
+          table[j][i] = table[j - 1][i - 1]
+        else:
+          table[j][i] = l1 + l2 - i - j + min(table[j][i - 1], table[j - 1][i], table[j - 1][i - 1])
+    return table[l2 - 1][l1 - 1]
+
+
+  def autocomplete(self, pattern, dist_func=None):
     result_set = set({})
     self.bfs(pattern, 0, self.head, result_set, '')
     if dist_func == None:
       dist_func = self.edit_dist
     
-    min_dist = 2147000000
-    min_dist_elem = ''
+    l = []
     for result in result_set:
       dist = dist_func(pattern, result)
-      if dist < min_dist:
-        min_dist = dist
-        min_dist_elem = result
-    return min_dist_elem
+      l.append((dist, result))
+    return sorted(l)
 
   def build_dictionary_from_file(self, file_name):
     d = dict()
@@ -191,12 +215,6 @@ class Trie:
 
 trie = Trie(None, None, 'tr_words.txt')
 
-str1 = "Turkcell'e kızgınım. Ve bu kızgınlık sanırım ayrılıkla sonlanıcak gibi geliyor bana.Farklı bir operatörün %30'u fazla fiyat teklif ediyorlar"
-str1 = str1.lower().replace("'", '').replace('.', '').replace('%', '').replace('30', '')
-
-for word in str1.split():
-  result_set = set({})
-  print ("word: ", word)
-  trie.bfs(word, 0, trie.head, result_set, '')
-  print ("result_set: ", result_set)
+print(trie.autocomplete('ayrılıkla', trie.edit_dist))
+# print(trie.autocomplete('sonlanma', trie.edit_dist2))
 
